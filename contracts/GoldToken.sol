@@ -9,8 +9,6 @@ import "hardhat/console.sol";
 
 contract GoldToken is ERC20, GoldReserveAndPrice {
 
-    mapping(address=>uint256) public s_testMappingBalance;
-
     event TGOLDMinted(address indexed account, uint256 amount);
     event GoldTestPassed(address indexed account, uint256 qtyGold, uint8 purityGold);
     event NewUserData(address indexed account, string userName, uint256 userIDNumber, uint256 qtyGold, uint8 purityGold, uint8 turn);
@@ -38,19 +36,15 @@ contract GoldToken is ERC20, GoldReserveAndPrice {
 
     uint8 public constant GOLDPURITY = 24;
      
-    // GoldReserveAndPrice internal immutable i_goldReserveAndPrice; - not needed as it's already inherited
-
-    constructor () ERC20 ("GoldToken", "TGOLD") { 
+    constructor () ERC20 ("GoldToken", "TGOLD") payable { 
+        require(msg.value >= 10*1e18 , "Insufficient Funding");
         owner = msg.sender;
-        // s_goldReserveAndPrice = GoldReserveAndPrice(0xE5f2A565Ee0Aa9836B4c80a07C8b32aAd7978e22); -  not needed as it's already inherited
-        // VS CODE - dynamically store the above deployment-address in VS Code via a script - not needed as it's already inherited
     }
 
     // only Contract-owner should have access to enter legit user data, event emit, data verified
     // IMMEDIATELY PERFORM TEST() AND MINT() POST ENTRING USER DATA
     function inputUserData(address account, uint8 turn, string memory userName, uint256 userIDNumber, uint256 qtyGold, uint8 purityGold) public onlyOwner() {
         // populate user data in the struct
-        // uint16 ids = s_userData[account][index];
         s_userData[account][turn].s_userName = userName;
         s_userData[account][turn].s_qtyGold = qtyGold;
         s_userData[account][turn].s_userIDNumber = userIDNumber;
@@ -102,17 +96,12 @@ contract GoldToken is ERC20, GoldReserveAndPrice {
         emit TGOLDMinted(account, amountToMint);  // can add account.name / other parameters instead of account.address
     }
 
-    // ADD BURN => reduce totalSupply----------------------------------------------
-
     // Redeem custom balance, rest with Vault for future trading
     // can add an event Redeemed but already have Transfer event in _burn()
     function redeemToWei(uint256 amountTGOLD) public {
-        uint256 balanceTGOLD = balanceOf(msg.sender);
-        require(amountTGOLD <= balanceTGOLD, "Insufficient balance");
-        // Checks-Effects-Interactions
-        balanceTGOLD -= amountTGOLD;
-        uint256 amountOfWei = tGOLDToWei(amountTGOLD);
-        (bool success, ) = msg.sender.call{value: amountOfWei}("");
+        _burn(msg.sender, amountTGOLD);
+        uint256 amountOfWei = tGOLDToWei(amountTGOLD);      // equivalent wei for TGOLD held
+        (bool success, ) = msg.sender.call{value: amountOfWei}("");     // contract sufficiently funded
         require(success, "Send Failed");
     }
 
@@ -120,7 +109,8 @@ contract GoldToken is ERC20, GoldReserveAndPrice {
         return 8;       
         // not 18, on the lines of real CGT token by CacheGold => actual qty. held by an a/c = 8 (whereas Eth is 18 wei)
     }
-
+    
+    // Price Feed XAU/USD is 8 decimals, hence, our GOld Price is also 8 decimals
     function getUserGoldPrice(address account, uint8 turn) public view returns (uint256) {
         uint256 priceGold = uint256(getLatestPriceGold());    // 10**8 introduced @ getLatestPriceGold of XAU/USD
         // hence, while displaying to the user, divide by 10**8
@@ -139,7 +129,6 @@ contract GoldToken is ERC20, GoldReserveAndPrice {
     }
 
     function tGOLDToWei(uint256 amountTGOLD) public view returns(uint256) {
-        // uint256 balanceTGOLD = balanceOf(msg.sender);       // replace balance with actual_amount in redeem(). This is for testing.
         uint256 priceGold = uint256(getLatestPriceGold());
         uint256 priceEth = uint256(getLatestPriceEth());
         uint256 numerator = 1e18 * priceGold * 10**3 * amountTGOLD;
@@ -148,19 +137,17 @@ contract GoldToken is ERC20, GoldReserveAndPrice {
         // detailed calculation / logic in Notebook # 12 @ page # 46
     }
 
-    function redeem() public payable {
-        (bool success, ) = msg.sender.call{value: 1e18}("");
+    function redeemContractBalance() public payable onlyOwner {
+        (bool success, ) = msg.sender.call{value: address(this).balance}("");
         require(success, "Send Failed");
     }
 
-    function redeemContractBalance() public payable {
-        //s_testMappingBalance[msg.sender] = 0;
-        (bool success, ) = msg.sender.call{value: 1e18}("");
-        require(success, "Send Failed");
+    function getContractBalance() public view returns (uint256) {
+        return address(this).balance;
     }
 
-    function fund() public payable {
-        //s_testMappingBalance[msg.sender] += msg.value;
-    }
+    receive() external payable {}
+
+    fallback() external payable {}
 }
 

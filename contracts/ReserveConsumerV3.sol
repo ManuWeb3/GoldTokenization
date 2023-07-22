@@ -81,7 +81,8 @@ contract GoldReserveAndPrice {
         return reserveGold;
     }
 
-    function getDecimals() external view returns (uint8) {
+    function getDecimalsPriceFeedEthUSD() external view returns (uint8) {
         return i_priceFeedEth.decimals();
     }
+    // can code same fn. for other 2 as well, likewise the above one.
 }
