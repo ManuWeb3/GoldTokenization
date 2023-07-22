@@ -7,7 +7,9 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "docs.chain.link/samples/DataFeeds/ReserveConsumerV3.sol";
 import "hardhat/console.sol";
 
-contract GoldToken is ERC20 {
+contract GoldToken is ERC20, GoldReserveAndPrice {
+
+    mapping(address=>uint256) public s_testMappingBalance;
 
     event TGOLDMinted(address indexed account, uint256 amount);
     event GoldTestPassed(address indexed account, uint256 qtyGold, uint8 purityGold);
@@ -36,12 +38,12 @@ contract GoldToken is ERC20 {
 
     uint8 public constant GOLDPURITY = 24;
      
-    GoldReserveAndPrice internal immutable s_goldReserveAndPrice;
+    // GoldReserveAndPrice internal immutable i_goldReserveAndPrice; - not needed as it's already inherited
 
     constructor () ERC20 ("GoldToken", "TGOLD") { 
         owner = msg.sender;
-        s_goldReserveAndPrice = GoldReserveAndPrice(0x0813d4a158d06784FDB48323344896B2B1aa0F85);
-        // VS CODE - dynamically store the above deployment-address in VS Code via a script
+        // s_goldReserveAndPrice = GoldReserveAndPrice(0xE5f2A565Ee0Aa9836B4c80a07C8b32aAd7978e22); -  not needed as it's already inherited
+        // VS CODE - dynamically store the above deployment-address in VS Code via a script - not needed as it's already inherited
     }
 
     // only Contract-owner should have access to enter legit user data, event emit, data verified
@@ -90,7 +92,7 @@ contract GoldToken is ERC20 {
         // decimal of TGOLD is 8, purity 24K = 99.9%
         uint256 supplyAfterMint = totalSupply + amountToMint;
         
-        require(supplyAfterMint <= uint256(s_goldReserveAndPrice.getLatestReserve()), "Exceeded reserves");
+        require(supplyAfterMint <= uint256(getLatestReserve()), "Exceeded reserves");
         
         // Checks-Effects-Implementations
         s_userData[account][turn].s_goldTokensMinted = true; 
@@ -100,19 +102,32 @@ contract GoldToken is ERC20 {
         emit TGOLDMinted(account, amountToMint);  // can add account.name / other parameters instead of account.address
     }
 
+    // ADD BURN => reduce totalSupply----------------------------------------------
+
     // Redeem custom balance, rest with Vault for future trading
-    function redeem(uint256 amount) public {
-        
+    // can add an event Redeemed but already have Transfer event in _burn()
+    function redeemToWei(uint256 amountTGOLD) public {
+        uint256 balanceTGOLD = balanceOf(msg.sender);
+        require(amountTGOLD <= balanceTGOLD, "Insufficient balance");
+        // Checks-Effects-Interactions
+        balanceTGOLD -= amountTGOLD;
+        uint256 amountOfWei = tGOLDToWei(amountTGOLD);
+        (bool success, ) = msg.sender.call{value: amountOfWei}("");
+        require(success, "Send Failed");
     }
 
     function decimals() public pure override returns(uint8) {
-        return 8;       // not 18
+        return 8;       
+        // not 18, on the lines of real CGT token by CacheGold => actual qty. held by an a/c = 8 (whereas Eth is 18 wei)
     }
 
     function getUserGoldPrice(address account, uint8 turn) public view returns (uint256) {
-        uint256 priceGold = uint256(s_goldReserveAndPrice.getLatestPrice());
-        return ((uint256(s_userData[account][turn].s_qtyGold) * 999) * priceGold) / 1000;
-}
+        uint256 priceGold = uint256(getLatestPriceGold());    // 10**8 introduced @ getLatestPriceGold of XAU/USD
+        // hence, while displaying to the user, divide by 10**8
+        // => 1000 gram total => 999 gm old @24K => $63,030.---- value => inside Smart Contract, the value = 6303058632000
+        return ((uint256(s_userData[account][turn].s_qtyGold) * 999) * (priceGold / 31103) * 1000) / 1000;
+        // 31103 because $1962.403 (Gold Price Feed) pertains to 1 Troy Oz (= 31.103 gram) of Gold
+    }
 
 
     function getUserData(address account, uint8 turn) public view returns (UserData memory) {
@@ -121,6 +136,31 @@ contract GoldToken is ERC20 {
 
     function getContractOwner() public view returns(address) {
         return owner;
+    }
+
+    function tGOLDToWei(uint256 amountTGOLD) public view returns(uint256) {
+        // uint256 balanceTGOLD = balanceOf(msg.sender);       // replace balance with actual_amount in redeem(). This is for testing.
+        uint256 priceGold = uint256(getLatestPriceGold());
+        uint256 priceEth = uint256(getLatestPriceEth());
+        uint256 numerator = 1e18 * priceGold * 10**3 * amountTGOLD;
+        uint256 denominator = 31103 * priceEth * 10**8;
+        return numerator / denominator;
+        // detailed calculation / logic in Notebook # 12 @ page # 46
+    }
+
+    function redeem() public payable {
+        (bool success, ) = msg.sender.call{value: 1e18}("");
+        require(success, "Send Failed");
+    }
+
+    function redeemContractBalance() public payable {
+        //s_testMappingBalance[msg.sender] = 0;
+        (bool success, ) = msg.sender.call{value: 1e18}("");
+        require(success, "Send Failed");
+    }
+
+    function fund() public payable {
+        //s_testMappingBalance[msg.sender] += msg.value;
     }
 }
 
