@@ -35,10 +35,15 @@ contract GoldToken is ERC20, GoldReserveAndPrice {
     mapping(address => mapping(uint8 => UserData)) private s_userData;
 
     uint8 public constant GOLDPURITY = 24;
+    uint256 private totalSupplyTGOLD;
      
     constructor () ERC20 ("GoldToken", "TGOLD") payable { 
         require(msg.value >= 10*1e18 , "Insufficient Funding");
         owner = msg.sender;
+        // Below, assigned all the TGOLD tokens/units equal to CacheGold's PoR reserve value to the contract owner
+        // _totalSupply private state var. of ERC20 can only be written in mint()/burn()
+        totalSupplyTGOLD = uint256(getLatestReserve());
+        _mint(owner, totalSupplyTGOLD);
     }
 
     // only Contract-owner should have access to enter legit user data, event emit, data verified
@@ -81,12 +86,12 @@ contract GoldToken is ERC20, GoldReserveAndPrice {
         require(!s_userData[account][turn].s_goldTokensMinted, "TGOLD already minted");     // !false = true
         
         
-        uint256 totalSupply = totalSupply();
+        uint256 totalSupply = totalSupply(); // ==================================
         uint256 amountToMint = ((s_userData[account][turn].s_qtyGold * 999) * 10**8) / 1000;
         // decimal of TGOLD is 8, purity 24K = 99.9%
         uint256 supplyAfterMint = totalSupply + amountToMint;
-        
-        require(supplyAfterMint <= uint256(getLatestReserve()), "Exceeded reserves");
+        // total supply of token units after new mint <= total of token-units corresponding to PoR Gold + new user Gold        
+        require(supplyAfterMint <= (uint256(getLatestReserve()) + amountToMint), "Exceeded reserves");
         
         // Checks-Effects-Implementations
         s_userData[account][turn].s_goldTokensMinted = true; 
@@ -150,4 +155,3 @@ contract GoldToken is ERC20, GoldReserveAndPrice {
 
     fallback() external payable {}
 }
-
