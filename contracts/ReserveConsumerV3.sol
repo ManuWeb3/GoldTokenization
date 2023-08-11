@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.7;
+pragma solidity ^0.8.20;
 
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";    // 8 decimals for all 3 values below
+import "https://github.com/smartcontractkit/chainlink/blob/develop/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";    // 8 decimals for all 3 values below
 
 contract GoldReserveAndPrice {
     AggregatorV3Interface internal immutable i_reserveFeed;
