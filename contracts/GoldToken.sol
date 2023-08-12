@@ -2,23 +2,17 @@
 pragma solidity ^0.8.20;
 
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol";
-// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
-// OZ-ownable.sol: ADD - VS Code
-import "./ReserveConsumerV3.sol";
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
 import "hardhat/console.sol";
+import "./ReserveConsumerV3.sol";
 
-contract GoldToken is ERC20, GoldReserveAndPrice {
+contract GoldToken is ERC20, GoldReserveAndPrice, Ownable {
 
     event TGOLDMinted(address indexed account, uint256 amount);
     event GoldTestPassed(address indexed account, uint256 qtyGold, uint8 purityGold);
     event NewUserData(address indexed account, string userName, uint256 userIDNumber, uint256 qtyGold, uint8 purityGold, uint8 turn);
 
-    modifier onlyOwner() {
-        require(owner == msg.sender, "Unauthorized Account");
-        _;
-    }
-
-    address private owner;
+    //address private owner;
 
     struct UserData {
         string s_userName;
@@ -37,13 +31,12 @@ contract GoldToken is ERC20, GoldReserveAndPrice {
     uint8 public constant GOLDPURITY = 24;
     uint256 private totalSupplyTGOLD;
      
-    constructor () ERC20 ("GoldToken", "TGOLD") payable { 
+    constructor () ERC20 ("GoldToken", "TGOLD") Ownable(msg.sender) payable { 
         require(msg.value >= 10*1e18 , "Insufficient Funding");
-        owner = msg.sender;
         // Below, assigned all the TGOLD tokens/units equal to CacheGold's PoR reserve value to the contract owner
         // _totalSupply private state var. of ERC20 can only be written in mint()/burn()
         totalSupplyTGOLD = uint256(getLatestReserve());
-        _mint(owner, totalSupplyTGOLD);
+        _mint(owner(), totalSupplyTGOLD);
     }
 
     // only Contract-owner should have access to enter legit user data, event emit, data verified
@@ -129,10 +122,6 @@ contract GoldToken is ERC20, GoldReserveAndPrice {
         return (s_userData[account][turn]);
     }
 
-    function getContractOwner() public view returns(address) {
-        return owner;
-    }
-
     function tGOLDToWei(uint256 amountTGOLD) public view returns(uint256) {
         uint256 priceGold = uint256(getLatestPriceGold());
         uint256 priceEth = uint256(getLatestPriceEth());
@@ -142,7 +131,7 @@ contract GoldToken is ERC20, GoldReserveAndPrice {
         // detailed calculation / logic in Notebook # 12 @ page # 46
     }
 
-    function redeemContractBalance() public payable onlyOwner {
+    function redeemContractBalance() public payable onlyOwner() {
         (bool success, ) = msg.sender.call{value: address(this).balance}("");
         require(success, "Send Failed");
     }
