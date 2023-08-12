@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import "https://github.com/smartcontractkit/chainlink/blob/develop/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";    // 8 decimals for all 3 values below
 
-contract GoldReserveAndPrice {
+contract GoldReserveAndPrices {
     AggregatorV3Interface internal immutable i_reserveFeed;
     AggregatorV3Interface internal immutable i_priceFeedGold;
     AggregatorV3Interface internal immutable i_priceFeedEth;

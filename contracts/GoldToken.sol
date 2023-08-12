@@ -4,14 +4,15 @@ pragma solidity ^0.8.20;
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
 import "hardhat/console.sol";
-import "./ReserveConsumerV3.sol";
+import "./GoldReserveAndPrices.sol";
 
-contract GoldToken is ERC20, GoldReserveAndPrice, Ownable {
+contract GoldToken is ERC20, GoldReserveAndPrices, Ownable {
 
     event TGOLDMinted(address indexed account, uint256 amount);
     event GoldTestPassed(address indexed account, uint256 qtyGold, uint8 purityGold);
     event NewUserData(address indexed account, string userName, uint256 userIDNumber, uint256 qtyGold, uint8 purityGold, uint8 turn);
-
+    event ContractBalanceRedeemedToOwner(uint256 contractBalance);
+    event TGOLDRedeemedAsWeiToUser(address indexed account, uint256 tGOLDAmountRedeemed, uint256 weiSent);
     //address private owner;
 
     struct UserData {
@@ -101,6 +102,7 @@ contract GoldToken is ERC20, GoldReserveAndPrice, Ownable {
         uint256 amountOfWei = tGOLDToWei(amountTGOLD);      // equivalent wei for TGOLD held
         (bool success, ) = msg.sender.call{value: amountOfWei}("");     // contract sufficiently funded
         require(success, "Send Failed");
+        emit TGOLDRedeemedAsWeiToUser(msg.sender, amountTGOLD, amountOfWei);
     }
 
     function decimals() public pure override returns(uint8) {
@@ -134,6 +136,7 @@ contract GoldToken is ERC20, GoldReserveAndPrice, Ownable {
     function redeemContractBalance() public payable onlyOwner() {
         (bool success, ) = msg.sender.call{value: address(this).balance}("");
         require(success, "Send Failed");
+        emit ContractBalanceRedeemedToOwner(address(this).balance);
     }
 
     function getContractBalance() public view returns (uint256) {
