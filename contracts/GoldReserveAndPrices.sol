@@ -3,6 +3,12 @@ pragma solidity ^0.8.20;
 
 import "https://github.com/smartcontractkit/chainlink/blob/develop/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";    // 8 decimals for all 3 values below
 
+/// @title GoldReserveAndPrices
+/// @author Manu Kapoor
+/// @notice This has 3 of Chainlink's Data Feeds on mainnet. 
+/// 1). ETH/USD 
+/// 2). XAU (GOLD)/USD 
+/// 3). CacheGold's Proof of Reserve
 contract GoldReserveAndPrices {
     AggregatorV3Interface internal immutable i_reserveFeed;
     AggregatorV3Interface internal immutable i_priceFeedGold;
@@ -13,10 +19,10 @@ contract GoldReserveAndPrices {
      * Aggregator: CacheGold PoR
      * Address: 0x5586bf404c7a22a4a4077401272ce5945f80189c
 
-     * Aggregator: XAU/USD
+     * Aggregator: XAU/USD Price Feed
      * Address: 0x214ed9da11d2fbe465a6fc601a91e62ebec1a0d6
 
-     * Aggregator: ETH/USD
+     * Aggregator: ETH/USD Price Feed
      * Address: 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419
      */
     constructor() {
@@ -50,7 +56,7 @@ contract GoldReserveAndPrices {
     }
 
     /**
-     * Returns the latest price of XAU(GOLD)/USD
+     * Returns the latest price of XAU/USD
      */
     function getLatestPriceGold() public view returns (int) {
         // prettier-ignore
@@ -81,8 +87,9 @@ contract GoldReserveAndPrices {
         return reserveGold;
     }
 
+    /// @notice checks the decmials value for the ETH/USD price feed
+    /// enables calculation later in redeeming TGOLD to Wei
     function getDecimalsPriceFeedEthUSD() external view returns (uint8) {
         return i_priceFeedEth.decimals();
     }
-    // can code same fn. for other 2 as well, likewise the above one.
 }
