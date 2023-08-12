@@ -8,12 +8,19 @@ import "./GoldReserveAndPrices.sol";
 
 contract GoldToken is ERC20, GoldReserveAndPrices, Ownable {
 
+    error InsufficientFunding(uint256 amountFunded, uint256 amountMinimumRequired);
+    error TestAlreadyDone();
+    error NonStandardPurity();
+    error UserGoldTestNotPassed();
+    error TGOLDAlreadyMinted();
+    error ExceededReserves();
+    error SendFailed();
+
     event TGOLDMinted(address indexed account, uint256 amount);
     event GoldTestPassed(address indexed account, uint256 qtyGold, uint8 purityGold);
     event NewUserData(address indexed account, string userName, uint256 userIDNumber, uint256 qtyGold, uint8 purityGold, uint8 turn);
     event ContractBalanceRedeemedToOwner(uint256 contractBalance);
     event TGOLDRedeemedAsWeiToUser(address indexed account, uint256 tGOLDAmountRedeemed, uint256 weiSent);
-    //address private owner;
 
     struct UserData {
         string s_userName;
@@ -33,7 +40,9 @@ contract GoldToken is ERC20, GoldReserveAndPrices, Ownable {
     uint256 private totalSupplyTGOLD;
      
     constructor () ERC20 ("GoldToken", "TGOLD") Ownable(msg.sender) payable { 
-        require(msg.value >= 10*1e18 , "Insufficient Funding");
+        if(msg.value < 10*1e18) {
+            revert InsufficientFunding(msg.value, 10*1e18);
+        }
         // Below, assigned all the TGOLD tokens/units equal to CacheGold's PoR reserve value to the contract owner
         // _totalSupply private state var. of ERC20 can only be written in mint()/burn()
         totalSupplyTGOLD = uint256(getLatestReserve());
@@ -54,14 +63,19 @@ contract GoldToken is ERC20, GoldReserveAndPrices, Ownable {
     }
 
     function testGoldBarPassed(address account, uint8 turn) public onlyOwner() returns (bool) {
-        require(!s_userData[account][turn].s_goldTestingDone, "Test already done");   // avoid repetitive tests
+        // avoid repetitive tests   
+        if(s_userData[account][turn].s_goldTestingDone) {
+            revert TestAlreadyDone();
+        }
         s_userData[account][turn].s_goldTestingDone = true;                           // test done irrespective of the result
 
         require(s_userData[account][turn].s_qtyGold == 10 || 
                 s_userData[account][turn].s_qtyGold == 100 || 
                 s_userData[account][turn].s_qtyGold == 1000, "Non-standard weight");
 
-        require(s_userData[account][turn].s_purityGold == GOLDPURITY, "Non-standard purity");
+        if(s_userData[account][turn].s_purityGold != GOLDPURITY) {
+            revert NonStandardPurity();
+        }
         
         // set flag to 1 when passed
         s_userData[account][turn].s_flag = 1;
@@ -72,20 +86,23 @@ contract GoldToken is ERC20, GoldReserveAndPrices, Ownable {
     // Only Contract-Owner can mint all the TGOLD tokens to the user
     function mint(address account, uint8 turn) public onlyOwner() {
         // first check whether test is done or not
-        require(s_userData[account][turn].s_flag == 1, "User's Gold-test not passed");
-        // require(!testGoldBarPassed(account, turn), "User's Gold-test not passed");       
-        // above version reverts, onlyOnwer can call the test, not mint() fn.
+        if(s_userData[account][turn].s_flag != 1) {
+            revert UserGoldTestNotPassed();
+        }
 
-        // mint TGOLD only if not already minted
-        require(!s_userData[account][turn].s_goldTokensMinted, "TGOLD already minted");     // !false = true
-        
+        // mint TGOLD only if NOT already minted
+        if(s_userData[account][turn].s_goldTokensMinted) {
+            revert TGOLDAlreadyMinted();
+        }
         
         uint256 totalSupply = totalSupply(); // ==================================
         uint256 amountToMint = ((s_userData[account][turn].s_qtyGold * 999) * 10**8) / 1000;
         // decimal of TGOLD is 8, purity 24K = 99.9%
         uint256 supplyAfterMint = totalSupply + amountToMint;
         // total supply of token units after new mint <= total of token-units corresponding to PoR Gold + new user Gold        
-        require(supplyAfterMint <= (uint256(getLatestReserve()) + amountToMint), "Exceeded reserves");
+        if(supplyAfterMint > (uint256(getLatestReserve()) + amountToMint)) {
+            revert ExceededReserves();
+        }
         
         // Checks-Effects-Implementations
         s_userData[account][turn].s_goldTokensMinted = true; 
@@ -101,7 +118,9 @@ contract GoldToken is ERC20, GoldReserveAndPrices, Ownable {
         _burn(msg.sender, amountTGOLD);
         uint256 amountOfWei = tGOLDToWei(amountTGOLD);      // equivalent wei for TGOLD held
         (bool success, ) = msg.sender.call{value: amountOfWei}("");     // contract sufficiently funded
-        require(success, "Send Failed");
+        if(!success) {
+            revert SendFailed();
+        }
         emit TGOLDRedeemedAsWeiToUser(msg.sender, amountTGOLD, amountOfWei);
     }
 
@@ -135,7 +154,9 @@ contract GoldToken is ERC20, GoldReserveAndPrices, Ownable {
 
     function redeemContractBalance() public payable onlyOwner() {
         (bool success, ) = msg.sender.call{value: address(this).balance}("");
-        require(success, "Send Failed");
+        if(!success) {
+            revert SendFailed();
+        }
         emit ContractBalanceRedeemedToOwner(address(this).balance);
     }
 
