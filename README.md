@@ -27,6 +27,6 @@ It's pretty simple and fast to spin up and run on RemixIDE.
 Everytime a returning user gets back, a new "turn" is assigned with the latest data
 2. Run Purity and Weight test on the Gold bar
 3. If test passed, run mint() to mint the ERC-20 TGOLD tokens to the user's wallet
-4.) Whenever user wants, it to redeem the token into Ether/Wei back to its wallet.
+4. Whenever user wants, it to redeem the token into Ether/Wei back to its wallet.
 
 Couple of helper functions available.
