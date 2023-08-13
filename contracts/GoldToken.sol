@@ -169,10 +169,12 @@ contract GoldToken is ERC20, GoldReserveAndPrices, Ownable {
         return (s_userData[account][turn]);
     }
 
-    /// @notice Convert TGOLD token units to an equivalent amount of Ether/Wei
+    /// @notice Convert TGOLD token units to an equivalent amount of Ether/Wei... 
+    /// when user does not want to redeem balance into Gold Bar(s)...
+    /// OR when TGOLD balance translates into a non-standard Gold Bar's weight
     /// @dev uses 2 of Chainlink's Price Feeds: XAU/USD and ETH/USD
     /**
-    *TGOLD to Wei calculation:
+    *TGOLD to Wei calculation: (AN EXAMPLE IS STATED AT THE END OF THIS CONTRACT BELOW)
     * 1 gram of Gold = 1 TGOLD token
     * TGOLD has 8 decimals => 1 TGOLD = 1e8 units
     * 1e8 units = price of 1 gram of pure Gold
@@ -215,4 +217,17 @@ contract GoldToken is ERC20, GoldReserveAndPrices, Ownable {
 
     fallback() external payable {}
 }
+/*
+First converted the balance TGOLD amount into equivalent $ amount using XAU/USD.
+Then converted the same $ amount into equivalent Ether / Wei to send it to user’s wallet.
+
+An example of tGOLDToWei():
+
+A balance of TGOLD = 99900000000 (= 999 gram of pure Gold @ 99.9% pure 1000 gram Gold Bar) 
+translates into 33228004341939231030 Wei (= 33.228.... Ether) 
+when:
+1). ETH/USD price feed returns 184997000000 (= US $1849.97) 
+2). And, XAU/USD price feed returns 191384048100 (= US $1913.84 ). 
+XAU/USD Price feed returns the price of 1 Troy Ounce of Gold = approx. 31.103 gram
+*/
 

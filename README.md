@@ -1,6 +1,6 @@
-The project is inspired from CacheGold's workflow 
+**The project is inspired from CacheGold's workflow 
 which is explained in Chianlink's Tech-Talk # 15 
-between Max Melcher and Dias Lonappan (CTO CacheGold)
+between Max Melcher and Dias Lonappan (CTO CacheGold)**
 
 Weblink: https://www.youtube.com/watch?v=tPURU6Sq2yo
 
@@ -19,8 +19,9 @@ It's pretty simple and fast to spin up and run on RemixIDE.
 1. Open https://remix.ethereum.org/
 2. Activate DGIT extension
 3. Clone this public repo: https://github.com/ManuWeb3/GoldTokenization.git
-4. Switch the environment to "Remix VM - Mainnet Fork"
-5. Compile and Deploy the contract with at least 10 Ether to fund it.
+4. Update the Remix Compiler version to ^0.8.20 as both the Solidity contracts use ^0.8.20
+5. Switch the environment to "Remix VM - Mainnet Fork"
+6. Compile and Deploy the contract with at least 10 Ether to fund it.
 
 4 Major functions the contract performs:
 1. Input new user's data that brought Gold to store in the vault and get it tokenized
